@@ -1,0 +1,45 @@
+name: Docker JavaFX
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build_windows:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download and Extract Models
+        run: |
+          wget https://github.com/litongjava/tools-ocr/releases/download/model-ppocr-v4/ch_PP-OCRv4_det_infer-onnx.zip
+          wget https://github.com/litongjava/tools-ocr/releases/download/model-ppocr-v4/ch_PP-OCRv4_rec_infer-onnx.zip
+          mkdir -p models/ch_PP-OCRv4_det_infer
+          mkdir -p models/ch_PP-OCRv4_rec_infer
+          unzip ch_PP-OCRv4_det_infer-onnx.zip -d models/ch_PP-OCRv4_det_infer
+          unzip ch_PP-OCRv4_rec_infer-onnx.zip -d models/ch_PP-OCRv4_rec_infer
+
+      - name: Copy Models
+        run: |
+          mkdir -p target/jfx/app
+          cp -r models target/jfx/app/
+
+      - name: Build with Docker
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            litongjava/centos-7-maven:3.8.8 \
+            mvn jfx:native -DskipTests
+
+      - name: Show Native Files
+        run: ls target/jfx/native
+
+      - name: Upload package
+        uses: actions/upload-artifact@v3
+        with:
+          name: target-jfx-native-linux-x64
+          path: target/jfx/native/
